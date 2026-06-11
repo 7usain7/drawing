@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::random_range;
 use raster::Color;
 
 // --- Traits ---
@@ -9,7 +9,9 @@ pub trait Displayable {
 
 pub trait Drawable {
     fn draw(&self, image: &mut impl Displayable);
-    fn color(&self) -> Color;
+    fn color(&self) -> Color {
+        random_color()
+    }
 }
 
 // --- Helper Functions ---
@@ -44,6 +46,12 @@ fn draw_line_pixels(p1: &Point, p2: &Point, color: Color, image: &mut impl Displ
     }
 }
 
+fn random_color() -> Color {
+    let r: u8 = random_range(0..=255);
+    let g: u8 = random_range(0..=255);
+    let b: u8 = random_range(0..=255);
+    Color::rgb(r, g, b)
+}
 // --- Primitive Structures & Implementations ---
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -58,10 +66,9 @@ impl Point {
     }
 
     pub fn random(width: i32, height: i32) -> Self {
-        let mut rng = rand::thread_rng();
         Point {
-            x: rng.gen_range(0..width),
-            y: rng.gen_range(0..height),
+            x: random_range(0..width),
+            y: random_range(0..height),
         }
     }
 }
@@ -69,10 +76,6 @@ impl Point {
 impl Drawable for Point {
     fn draw(&self, image: &mut impl Displayable) {
         image.display(self.x, self.y, self.color());
-    }
-
-    fn color(&self) -> Color {
-        Color::rgb(255, 69, 0)
     }
 }
 
@@ -82,7 +85,9 @@ pub struct Line {
 }
 
 impl Line {
-
+    pub fn new(p1: &Point, p2: &Point) -> Self {
+        Line { p1: *p1, p2: *p2 }
+    }
     pub fn random(width: i32, height: i32) -> Self {
         Line {
             p1: Point::random(width, height),
@@ -95,73 +100,6 @@ impl Drawable for Line {
     fn draw(&self, image: &mut impl Displayable) {
         draw_line_pixels(&self.p1, &self.p2, self.color(), image);
     }
-
-    fn color(&self) -> Color {
-        Color::rgb(50, 205, 50)
-    }
-}
-
-pub struct Triangle {
-    pub p1: Point,
-    pub p2: Point,
-    pub p3: Point,
-}
-
-impl Triangle {
-    pub fn new(p1: &Point, p2: &Point, p3: &Point) -> Self {
-        Triangle { p1: *p1, p2: *p2, p3: *p3 }
-    }
-}
-
-impl Drawable for Triangle {
-    fn draw(&self, image: &mut impl Displayable) {
-        let c = self.color();
-        draw_line_pixels(&self.p1, &self.p2, c.clone(), image);
-        draw_line_pixels(&self.p2, &self.p3, c.clone(), image);
-        draw_line_pixels(&self.p3, &self.p1, c, image);
-    }
-
-    fn color(&self) -> Color {
-        Color::rgb(30, 144, 255)
-    }
-}
-
-pub struct Rectangle {
-    pub p1: Point,
-    pub p2: Point,
-}
-
-impl Rectangle {
-    pub fn new(p1: &Point, p2: &Point) -> Self {
-        let min_x = p1.x.min(p2.x);
-        let max_x = p1.x.max(p2.x);
-        let min_y = p1.y.min(p2.y);
-        let max_y = p1.y.max(p2.y);
-        
-        Rectangle {
-            p1: Point::new(min_x, min_y),
-            p2: Point::new(max_x, max_y),
-        }
-    }
-}
-
-impl Drawable for Rectangle {
-    fn draw(&self, image: &mut impl Displayable) {
-        let c = self.color();
-        let tl = Point::new(self.p1.x, self.p1.y);
-        let tr = Point::new(self.p2.x, self.p1.y);
-        let br = Point::new(self.p2.x, self.p2.y);
-        let bl = Point::new(self.p1.x, self.p2.y);
-
-        draw_line_pixels(&tl, &tr, c.clone(), image);
-        draw_line_pixels(&tr, &br, c.clone(), image);
-        draw_line_pixels(&br, &bl, c.clone(), image);
-        draw_line_pixels(&bl, &tl, c, image);
-    }
-
-    fn color(&self) -> Color {
-        Color::rgb(255, 215, 0)
-    }
 }
 
 pub struct Circle {
@@ -170,12 +108,13 @@ pub struct Circle {
 }
 
 impl Circle {
-
     pub fn random(width: i32, height: i32) -> Self {
-        let mut rng = rand::thread_rng();
-        let center = Point::random(width, height);
-        let max_radius = (width.min(height) / 5).max(10);
-        let radius = rng.gen_range(5..max_radius);
+        let min_radius = 5;
+        let x = random_range(min_radius..=(width.min(height)));
+        let y = random_range(min_radius..=(width.min(height)));
+        let max_radius = (width - x).min(x).min(height - y).min(y);
+        let radius = random_range(min_radius..=max_radius);
+        let center = Point::new(x, y);
         Circle { center, radius }
     }
 }
@@ -203,20 +142,76 @@ impl Drawable for Circle {
         };
 
         plot_circle_points(x, y);
-        while y >= x {
-            x += 1;
+        while y > x {
+            plot_circle_points(x, y);
+
             if d > 0 {
                 y -= 1;
                 d = d + 4 * (x - y) + 10;
             } else {
                 d = d + 4 * x + 6;
             }
-            plot_circle_points(x, y);
+            x += 1;
         }
     }
+}
 
-    fn color(&self) -> Color {
-        Color::rgb(238, 130, 238)
+pub struct Triangle {
+    pub p1: Point,
+    pub p2: Point,
+    pub p3: Point,
+}
+
+impl Triangle {
+    pub fn new(p1: &Point, p2: &Point, p3: &Point) -> Self {
+        Triangle {
+            p1: *p1,
+            p2: *p2,
+            p3: *p3,
+        }
+    }
+}
+
+impl Drawable for Triangle {
+    fn draw(&self, image: &mut impl Displayable) {
+        let c = self.color();
+        draw_line_pixels(&self.p1, &self.p2, c.clone(), image);
+        draw_line_pixels(&self.p2, &self.p3, c.clone(), image);
+        draw_line_pixels(&self.p3, &self.p1, c, image);
+    }
+}
+
+pub struct Rectangle {
+    pub p1: Point,
+    pub p2: Point,
+}
+
+impl Rectangle {
+    pub fn new(p1: &Point, p2: &Point) -> Self {
+        let min_x = p1.x.min(p2.x);
+        let max_x = p1.x.max(p2.x);
+        let min_y = p1.y.min(p2.y);
+        let max_y = p1.y.max(p2.y);
+
+        Rectangle {
+            p1: Point::new(min_x, min_y),
+            p2: Point::new(max_x, max_y),
+        }
+    }
+}
+
+impl Drawable for Rectangle {
+    fn draw(&self, image: &mut impl Displayable) {
+        let c = self.color();
+        let tl = Point::new(self.p1.x, self.p1.y);
+        let tr = Point::new(self.p2.x, self.p1.y);
+        let br = Point::new(self.p2.x, self.p2.y);
+        let bl = Point::new(self.p1.x, self.p2.y);
+
+        draw_line_pixels(&tl, &tr, c.clone(), image);
+        draw_line_pixels(&tr, &br, c.clone(), image);
+        draw_line_pixels(&br, &bl, c.clone(), image);
+        draw_line_pixels(&bl, &tl, c, image);
     }
 }
 
@@ -244,7 +239,7 @@ mod tests {
             let p = Point::random(w, h);
             assert!(p.x >= 0 && p.x < w, "Point X out of bounds: {}", p.x);
             assert!(p.y >= 0 && p.y < h, "Point Y out of bounds: {}", p.y);
-            
+
             let l = Line::random(w, h);
             assert!(l.p1.x >= 0 && l.p1.x < w && l.p2.x >= 0 && l.p2.x < w);
             assert!(l.p1.y >= 0 && l.p1.y < h && l.p2.y >= 0 && l.p2.y < h);
