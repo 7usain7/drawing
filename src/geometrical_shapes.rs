@@ -1,49 +1,89 @@
-use std::mem::swap;
+use rand::Rng;
+use raster::Color;
 
-use raster::{Color, Image};
-
-pub trait Drawable {
-    fn draw(&self, _image: &mut Image) {}
-    fn color(&self) -> Color {
-        Color::red()
-    }
-}
+// --- Traits ---
 
 pub trait Displayable {
     fn display(&mut self, x: i32, y: i32, color: Color);
 }
-#[derive(Clone, Copy)]
-pub struct Point {
-    x: i32,
-    y: i32,
+
+pub trait Drawable {
+    fn draw(&self, image: &mut impl Displayable);
+    fn color(&self) -> Color;
 }
-impl Point {
-    pub fn new(x: i32, y: i32) -> Point {
-        Point { x: x, y: y }
+
+// --- Helper Functions ---
+
+/// Draws a line between two points using Bresenham's Line Algorithm.
+fn draw_line_pixels(p1: &Point, p2: &Point, color: Color, image: &mut impl Displayable) {
+    let mut x0 = p1.x;
+    let mut y0 = p1.y;
+    let x1 = p2.x;
+    let y1 = p2.y;
+
+    let dx = (x1 - x0).abs();
+    let dy = (y1 - y0).abs();
+    let sx = if x0 < x1 { 1 } else { -1 };
+    let sy = if y0 < y1 { 1 } else { -1 };
+    let mut err = dx - dy;
+
+    loop {
+        image.display(x0, y0, color.clone());
+        if x0 == x1 && y0 == y1 {
+            break;
+        }
+        let e2 = 2 * err;
+        if e2 > -dy {
+            err -= dy;
+            x0 += sx;
+        }
+        if e2 < dx {
+            err += dx;
+            y0 += sy;
+        }
     }
-    pub fn random(_width: i32, _height: i32) -> Point {
-        // TODO - Use actual random function sample range and make sure its not the same point
-        Point { x: 0, y: 0 }
+}
+
+// --- Primitive Structures & Implementations ---
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Point {
+    pub fn new(x: i32, y: i32) -> Self {
+        Point { x, y }
+    }
+
+    pub fn random(width: i32, height: i32) -> Self {
+        let mut rng = rand::thread_rng();
+        Point {
+            x: rng.gen_range(0..width),
+            y: rng.gen_range(0..height),
+        }
     }
 }
 
 impl Drawable for Point {
-    fn draw(&self, image: &mut Image) {
-        image.set_pixel(self.x, self.y, self.color()).unwrap();
+    fn draw(&self, image: &mut impl Displayable) {
+        image.display(self.x, self.y, self.color());
+    }
+
+    fn color(&self) -> Color {
+        Color::rgb(255, 69, 0)
     }
 }
 
 pub struct Line {
-    p1: Point,
-    p2: Point,
+    pub p1: Point,
+    pub p2: Point,
 }
 
 impl Line {
-    pub fn new(p1: &Point, p2: &Point) -> Line {
-        Line { p1: *p1, p2: *p2 }
-    }
 
-    pub fn random(width: i32, height: i32) -> Line {
+    pub fn random(width: i32, height: i32) -> Self {
         Line {
             p1: Point::random(width, height),
             p2: Point::random(width, height),
@@ -52,173 +92,186 @@ impl Line {
 }
 
 impl Drawable for Line {
-    fn draw(&self, image: &mut Image) {
-        let mut p0 = self.p1;
-        let mut p1 = self.p2;
+    fn draw(&self, image: &mut impl Displayable) {
+        draw_line_pixels(&self.p1, &self.p2, self.color(), image);
+    }
 
-        let steep = (p0.x - p1.x).abs() < (p0.y - p1.y).abs();
-        if steep {
-            swap(&mut p0.x, &mut p0.y);
-            swap(&mut p1.x, &mut p1.y);
+    fn color(&self) -> Color {
+        Color::rgb(50, 205, 50)
+    }
+}
+
+pub struct Triangle {
+    pub p1: Point,
+    pub p2: Point,
+    pub p3: Point,
+}
+
+impl Triangle {
+    pub fn new(p1: &Point, p2: &Point, p3: &Point) -> Self {
+        Triangle { p1: *p1, p2: *p2, p3: *p3 }
+    }
+}
+
+impl Drawable for Triangle {
+    fn draw(&self, image: &mut impl Displayable) {
+        let c = self.color();
+        draw_line_pixels(&self.p1, &self.p2, c.clone(), image);
+        draw_line_pixels(&self.p2, &self.p3, c.clone(), image);
+        draw_line_pixels(&self.p3, &self.p1, c, image);
+    }
+
+    fn color(&self) -> Color {
+        Color::rgb(30, 144, 255)
+    }
+}
+
+pub struct Rectangle {
+    pub p1: Point,
+    pub p2: Point,
+}
+
+impl Rectangle {
+    pub fn new(p1: &Point, p2: &Point) -> Self {
+        let min_x = p1.x.min(p2.x);
+        let max_x = p1.x.max(p2.x);
+        let min_y = p1.y.min(p2.y);
+        let max_y = p1.y.max(p2.y);
+        
+        Rectangle {
+            p1: Point::new(min_x, min_y),
+            p2: Point::new(max_x, max_y),
         }
+    }
+}
 
-        if p0.x > p1.x {
-            swap(&mut p0.x, &mut p1.x);
-            swap(&mut p0.y, &mut p1.y)
-        }
+impl Drawable for Rectangle {
+    fn draw(&self, image: &mut impl Displayable) {
+        let c = self.color();
+        let tl = Point::new(self.p1.x, self.p1.y);
+        let tr = Point::new(self.p2.x, self.p1.y);
+        let br = Point::new(self.p2.x, self.p2.y);
+        let bl = Point::new(self.p1.x, self.p2.y);
 
-        let dx = p1.x - p0.x;
-        let dy = p1.y - p0.y;
+        draw_line_pixels(&tl, &tr, c.clone(), image);
+        draw_line_pixels(&tr, &br, c.clone(), image);
+        draw_line_pixels(&br, &bl, c.clone(), image);
+        draw_line_pixels(&bl, &tl, c, image);
+    }
 
-        let derror2 = dy.abs() * 2;
-        let mut error2 = 0;
-        let mut y = p0.y;
-        let mut x = p0.x;
-        while x <= p1.x {
-            if steep {
-                image.set_pixel(y, x, self.color()).unwrap();
-            } else {
-                image.set_pixel(x, y, self.color()).unwrap();
-            }
-            error2 += derror2;
-            if error2 > x {
-                if p1.y > p0.y {
-                    y += 1;
-                } else {
-                    y -= 1;
-                }
-                error2 -= dx * 2;
-            }
-            x += 1;
-        }
+    fn color(&self) -> Color {
+        Color::rgb(255, 215, 0)
     }
 }
 
 pub struct Circle {
-    center: Point,
-    radius: i32,
+    pub center: Point,
+    pub radius: i32,
 }
 
 impl Circle {
-    pub fn new(center: &Point, radius: i32) -> Circle {
-        Circle {
-            center: *center,
-            radius: radius,
-        }
-    }
 
-    pub fn random(_width: i32, _height: i32) -> Circle {
-        Circle {
-            center: Point::random(_width, _height),
-            radius: 0,
-        }
+    pub fn random(width: i32, height: i32) -> Self {
+        let mut rng = rand::thread_rng();
+        let center = Point::random(width, height);
+        let max_radius = (width.min(height) / 5).max(10);
+        let radius = rng.gen_range(5..max_radius);
+        Circle { center, radius }
     }
 }
 
 impl Drawable for Circle {
-    fn draw(&self, image: &mut Image) {
+    fn draw(&self, image: &mut impl Displayable) {
         let xc = self.center.x;
         let yc = self.center.y;
+        let r = self.radius;
+        let c = self.color();
 
         let mut x = 0;
-        let mut y = self.radius;
+        let mut y = r;
+        let mut d = 3 - 2 * r;
 
-        let mut d = 3 - (2 * self.radius);
+        let mut plot_circle_points = |x: i32, y: i32| {
+            image.display(xc + x, yc + y, c.clone());
+            image.display(xc - x, yc + y, c.clone());
+            image.display(xc + x, yc - y, c.clone());
+            image.display(xc - x, yc - y, c.clone());
+            image.display(xc + y, yc + x, c.clone());
+            image.display(xc - y, yc + x, c.clone());
+            image.display(xc + y, yc - x, c.clone());
+            image.display(xc - y, yc - x, c.clone());
+        };
 
-        while x < y {
-            image.set_pixel(xc + x, yc + y, self.color()).unwrap();
-            image.set_pixel(xc + x, yc - y, self.color()).unwrap();
-            image.set_pixel(xc - x, yc - y, self.color()).unwrap();
-            image.set_pixel(xc - x, yc + y, self.color()).unwrap();
-            image.set_pixel(yc + y, xc + x, self.color()).unwrap();
-            image.set_pixel(yc + y, xc - x, self.color()).unwrap();
-            image.set_pixel(yc - y, xc - x, self.color()).unwrap();
-            image.set_pixel(yc - y, xc + x, self.color()).unwrap();
-
-            if d < 0 {
-                d += 4 * x + 6;
-            } else {
-                d += 4 * (x - y) + 10;
-                y -= 1;
-            }
+        plot_circle_points(x, y);
+        while y >= x {
             x += 1;
+            if d > 0 {
+                y -= 1;
+                d = d + 4 * (x - y) + 10;
+            } else {
+                d = d + 4 * x + 6;
+            }
+            plot_circle_points(x, y);
         }
     }
-}
-pub struct Triangle {
-    p1: Point,
-    p2: Point,
-    p3: Point,
-}
 
-impl Triangle {
-    pub fn new(p1: &Point, p2: &Point, p3: &Point) -> Triangle {
-        Triangle {
-            p1: *p1,
-            p2: *p2,
-            p3: *p3,
-        }
+    fn color(&self) -> Color {
+        Color::rgb(238, 130, 238)
     }
 }
 
-impl Drawable for Triangle {}
-
-pub struct Rectangle {
-    p1: Point,
-    p2: Point,
-}
-
-impl Rectangle {
-    pub fn new(p1: &Point, p2: &Point) -> Rectangle {
-        Rectangle { p1: *p1, p2: *p2 }
-    }
-}
-
-impl Drawable for Rectangle {}
+// --- Unit Tests ---
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use raster::Image;
 
-    #[test]
-    fn point_draw_sets_pixel() {
-        let mut image = Image::blank(100, 100);
-        let p = Point::new(10, 10);
-        let expected = p.color();
-        p.draw(&mut image);
-        let pixel = image.get_pixel(10, 10).unwrap();
-        assert_eq!(pixel.r, expected.r);
-        assert_eq!(pixel.g, expected.g);
-        assert_eq!(pixel.b, expected.b);
+    struct MockImage {
+        pub points: Vec<(i32, i32)>,
+    }
+
+    impl Displayable for MockImage {
+        fn display(&mut self, x: i32, y: i32, _color: Color) {
+            self.points.push((x, y));
+        }
     }
 
     #[test]
-    fn line_draw_same_point() {
-        let mut image = Image::blank(100, 100);
+    fn test_random_bounds() {
+        let w = 500;
+        let h = 400;
+        for _ in 0..100 {
+            let p = Point::random(w, h);
+            assert!(p.x >= 0 && p.x < w, "Point X out of bounds: {}", p.x);
+            assert!(p.y >= 0 && p.y < h, "Point Y out of bounds: {}", p.y);
+            
+            let l = Line::random(w, h);
+            assert!(l.p1.x >= 0 && l.p1.x < w && l.p2.x >= 0 && l.p2.x < w);
+            assert!(l.p1.y >= 0 && l.p1.y < h && l.p2.y >= 0 && l.p2.y < h);
+        }
+    }
+
+    #[test]
+    fn test_rectangle_normalization() {
+        let p1 = Point::new(300, 400);
+        let p2 = Point::new(100, 200);
+        let rect = Rectangle::new(&p1, &p2);
+
+        assert_eq!(rect.p1.x, 100);
+        assert_eq!(rect.p1.y, 200);
+        assert_eq!(rect.p2.x, 300);
+        assert_eq!(rect.p2.y, 400);
+    }
+
+    #[test]
+    fn test_line_edge_case_same_coordinate() {
         let p = Point::new(50, 50);
-        let l = Line::new(&p, &p);
-        // should not panic when both endpoints are identical
-        l.draw(&mut image);
-        let expected = l.color();
-        let pixel = image.get_pixel(50, 50).unwrap();
-        assert_eq!(pixel.r, expected.r);
-        assert_eq!(pixel.g, expected.g);
-        assert_eq!(pixel.b, expected.b);
-    }
+        let line = Line::new(&p, &p);
+        let mut mock = MockImage { points: Vec::new() };
 
-    #[test]
-    fn line_draw_horizontal() {
-        let mut image = Image::blank(100, 100);
-        let p1 = Point::new(10, 10);
-        let p2 = Point::new(20, 10);
-        let l = Line::new(&p1, &p2);
-        l.draw(&mut image);
-        let expected = l.color();
-        // midpoint should be painted
-        let pixel = image.get_pixel(15, 10).unwrap();
-        assert_eq!(pixel.r, expected.r);
-        assert_eq!(pixel.g, expected.g);
-        assert_eq!(pixel.b, expected.b);
+        line.draw(&mut mock);
+
+        assert_eq!(mock.points.len(), 1);
+        assert_eq!(mock.points[0], (50, 50));
     }
 }

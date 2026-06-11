@@ -6,9 +6,25 @@ use raster::{Color, Image};
 
 fn main() {
     let mut image = Image::blank(1000, 1000);
-    gs::Point::new(500, 500).draw(&mut image);
-    gs::Line::new(&gs::Point::new(100, 100), &gs::Point::new(700, 700)).draw(&mut image);
-    gs::Circle::new(&gs::Point::new(500, 500), 50).draw(&mut image);
+
+    gs::Line::random(image.width, image.height).draw(&mut image);
+
+    gs::Point::random(image.width, image.height).draw(&mut image);
+
+    let rectangle = gs::Rectangle::new(&gs::Point::new(150, 300), &gs::Point::new(50, 60));
+    rectangle.draw(&mut image);
+
+    let triangle = gs::Triangle::new(
+        &gs::Point::new(500, 500),
+        &gs::Point::new(250, 700),
+        &gs::Point::new(700, 800),
+    );
+    triangle.draw(&mut image);
+
+    for _ in 1..50 {
+        gs::Circle::random(image.width, image.height).draw(&mut image);
+    }
+
     raster::save(&image, "image.png").unwrap();
 }
 
