@@ -1,9 +1,9 @@
 use std::mem::swap;
 
-use raster::{Color, Image};
+use raster::Color;
 
 pub trait Drawable {
-    fn draw(&self, _image: &mut Image) {}
+    fn draw(&self, _canvas: &mut impl Displayable) {}
     fn color(&self) -> Color {
         Color::red()
     }
@@ -28,8 +28,8 @@ impl Point {
 }
 
 impl Drawable for Point {
-    fn draw(&self, image: &mut Image) {
-        image.set_pixel(self.x, self.y, self.color()).unwrap();
+    fn draw(&self, canvas: &mut impl Displayable) {
+        canvas.display(self.x, self.y, self.color());
     }
 }
 
@@ -52,7 +52,7 @@ impl Line {
 }
 
 impl Drawable for Line {
-    fn draw(&self, image: &mut Image) {
+    fn draw(&self, canvas: &mut impl Displayable) {
         let mut p0 = self.p1;
         let mut p1 = self.p2;
 
@@ -76,9 +76,9 @@ impl Drawable for Line {
         let mut x = p0.x;
         while x <= p1.x {
             if steep {
-                image.set_pixel(y, x, self.color()).unwrap();
+                canvas.display(y, x, self.color());
             } else {
-                image.set_pixel(x, y, self.color()).unwrap();
+                canvas.display(x, y, self.color());
             }
             error2 += derror2;
             if error2 > x {
@@ -116,7 +116,7 @@ impl Circle {
 }
 
 impl Drawable for Circle {
-    fn draw(&self, image: &mut Image) {
+    fn draw(&self, canvas: &mut impl Displayable) {
         let xc = self.center.x;
         let yc = self.center.y;
 
@@ -126,14 +126,14 @@ impl Drawable for Circle {
         let mut d = 3 - (2 * self.radius);
 
         while x < y {
-            image.set_pixel(xc + x, yc + y, self.color()).unwrap();
-            image.set_pixel(xc + x, yc - y, self.color()).unwrap();
-            image.set_pixel(xc - x, yc - y, self.color()).unwrap();
-            image.set_pixel(xc - x, yc + y, self.color()).unwrap();
-            image.set_pixel(yc + y, xc + x, self.color()).unwrap();
-            image.set_pixel(yc + y, xc - x, self.color()).unwrap();
-            image.set_pixel(yc - y, xc - x, self.color()).unwrap();
-            image.set_pixel(yc - y, xc + x, self.color()).unwrap();
+            canvas.display(xc + x, yc + y, self.color());
+            canvas.display(xc + x, yc - y, self.color());
+            canvas.display(xc - x, yc - y, self.color());
+            canvas.display(xc - x, yc + y, self.color());
+            canvas.display(xc + y, yc + x, self.color());
+            canvas.display(xc + y, yc - x, self.color());
+            canvas.display(xc - y, yc - x, self.color());
+            canvas.display(xc - y, yc + x, self.color());
 
             if d < 0 {
                 d += 4 * x + 6;

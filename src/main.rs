@@ -6,9 +6,9 @@ use raster::{Color, Image};
 
 fn main() {
     let mut image = Image::blank(1000, 1000);
-    gs::Point::new(500, 500).draw(&mut image);
-    gs::Line::new(&gs::Point::new(100, 100), &gs::Point::new(700, 700)).draw(&mut image);
-    gs::Circle::new(&gs::Point::new(500, 500), 50).draw(&mut image);
+    gs::Point::new(500, 600).draw(&mut image);
+    gs::Line::new(&gs::Point::new(100, 100), &gs::Point::new(300, 800)).draw(&mut image);
+    gs::Circle::new(&gs::Point::new(500, 600), 200).draw(&mut image);
     raster::save(&image, "image.png").unwrap();
 }
 
