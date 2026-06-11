@@ -115,8 +115,36 @@ impl Circle {
     }
 }
 
-impl Drawable for Circle {}
+impl Drawable for Circle {
+    fn draw(&self, image: &mut Image) {
+        let xc = self.center.x;
+        let yc = self.center.y;
 
+        let mut x = 0;
+        let mut y = self.radius;
+
+        let mut d = 3 - (2 * self.radius);
+
+        while x < y {
+            image.set_pixel(xc + x, yc + y, self.color()).unwrap();
+            image.set_pixel(xc + x, yc - y, self.color()).unwrap();
+            image.set_pixel(xc - x, yc - y, self.color()).unwrap();
+            image.set_pixel(xc - x, yc + y, self.color()).unwrap();
+            image.set_pixel(yc + y, xc + x, self.color()).unwrap();
+            image.set_pixel(yc + y, xc - x, self.color()).unwrap();
+            image.set_pixel(yc - y, xc - x, self.color()).unwrap();
+            image.set_pixel(yc - y, xc + x, self.color()).unwrap();
+
+            if d < 0 {
+                d += 4 * x + 6;
+            } else {
+                d += 4 * (x - y) + 10;
+                y -= 1;
+            }
+            x += 1;
+        }
+    }
+}
 pub struct Triangle {
     p1: Point,
     p2: Point,
