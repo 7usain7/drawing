@@ -46,6 +46,20 @@ fn draw_line_pixels(p1: &Point, p2: &Point, color: Color, image: &mut impl Displ
     }
 }
 
+fn gen_points_polygon(sides: u8, center: &Point, radius: i32, rotation: u8) -> Vec<Point> {
+    use std::f64::consts::PI;
+    let n = sides as usize;
+    let rot_rad = (rotation as f64).to_radians();
+    (0..n)
+        .map(|i| {
+            let angle = rot_rad + (2.0 * PI * i as f64 / n as f64);
+            let x = center.x + (radius as f64 * angle.cos()).round() as i32;
+            let y = center.y + (radius as f64 * angle.sin()).round() as i32;
+            Point::new(x, y)
+        })
+        .collect()
+}
+
 fn random_color() -> Color {
     let r: u8 = random_range(0..=255);
     let g: u8 = random_range(0..=255);
@@ -215,6 +229,27 @@ impl Drawable for Rectangle {
     }
 }
 
+pub struct Polygon {
+    pub points: Vec<Point>,
+}
+
+impl Polygon {
+    pub fn new(sides: u8, center: &Point, radius: i32, rotation: u8) -> Self {
+        let points: Vec<Point> = gen_points_polygon(sides, center, radius, rotation);
+
+        Polygon { points: points }
+    }
+}
+
+impl Drawable for Polygon {
+    fn draw(&self, image: &mut impl Displayable) {
+        let c = self.color();
+        let n = self.points.len();
+        for i in 0..n {
+            draw_line_pixels(&self.points[i], &self.points[(i + 1) % n], c.clone(), image);
+        }
+    }
+}
 // --- Unit Tests ---
 
 #[cfg(test)]
@@ -245,7 +280,6 @@ mod tests {
             assert!(l.p1.y >= 0 && l.p1.y < h && l.p2.y >= 0 && l.p2.y < h);
         }
     }
-
     #[test]
     fn test_rectangle_normalization() {
         let p1 = Point::new(300, 400);

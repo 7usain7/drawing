@@ -7,22 +7,21 @@ use raster::{Color, Image};
 fn main() {
     let mut image = Image::blank(1000, 1000);
 
-    gs::Line::random(image.width, image.height).draw(&mut image);
+    // 8 polygons: triangle(3) to decagon(10), arranged in 2 rows x 4 cols
+    let cols = 4;
+    let cell_w = 1000 / cols;
+    let cell_h = 1000 / 2;
+    let radius = 100;
 
-    gs::Point::random(image.width, image.height).draw(&mut image);
-
-    let rectangle = gs::Rectangle::new(&gs::Point::new(150, 300), &gs::Point::new(50, 60));
-    rectangle.draw(&mut image);
-
-    let triangle = gs::Triangle::new(
-        &gs::Point::new(500, 500),
-        &gs::Point::new(250, 700),
-        &gs::Point::new(700, 800),
-    );
-    triangle.draw(&mut image);
-
-    for _ in 1..50 {
-        gs::Circle::random(image.width, image.height).draw(&mut image);
+    for sides in 3u8..=10 {
+        let idx = (sides - 3) as i32;
+        let col = idx % cols;
+        let row = idx / cols;
+        let cx = cell_w * col + cell_w / 2;
+        let cy = cell_h * row + cell_h / 2;
+        let center = gs::Point::new(cx, cy);
+        let angle = (90 - 180 / sides as i32) as u8;
+        gs::Polygon::new(sides, &center, radius, angle).draw(&mut image);
     }
 
     raster::save(&image, "image.png").unwrap();
