@@ -2,15 +2,68 @@ mod geometrical_shapes;
 
 use geometrical_shapes as gs;
 use gif::{Encoder, Frame, Repeat, SetParameter};
-use gs::Displayable;
+use gs::{Displayable, Drawable};
 use raster::{Color, Image};
 use std::borrow::Cow;
 use std::fs::{self, File};
 
 fn main() {
+    draw_original_image();
+    draw_polygons_image();
+    draw_rotating_cube_gif();
+}
+
+fn draw_original_image() {
+    let mut image = Image::blank(1000, 1000);
+
+    gs::Line::random(image.width, image.height).draw(&mut image);
+
+    gs::Point::random(image.width, image.height).draw(&mut image);
+
+    let rectangle = gs::Rectangle::new(&gs::Point::new(150, 300), &gs::Point::new(50, 60));
+    rectangle.draw(&mut image);
+
+    let triangle = gs::Triangle::new(
+        &gs::Point::new(500, 500),
+        &gs::Point::new(250, 700),
+        &gs::Point::new(700, 800),
+    );
+    triangle.draw(&mut image);
+
+    for _ in 1..50 {
+        gs::Circle::random(image.width, image.height).draw(&mut image);
+    }
+
+    raster::save(&image, "image.png").unwrap();
+}
+
+fn draw_polygons_image() {
+    let mut image = Image::blank(1000, 1000);
+
+    let cols = 4;
+    let cell_w = image.width / cols;
+    let cell_h = image.height / 2;
+    let radius = 100;
+
+    for sides in 3u8..=10 {
+        let idx = (sides - 3) as i32;
+        let col = idx % cols;
+        let row = idx / cols;
+        let cx = cell_w * col + cell_w / 2;
+        let cy = cell_h * row + cell_h / 2;
+        let center = gs::Point::new(cx, cy);
+        let angle = (90 - 180 / sides as i32) as u8;
+
+        gs::Polygon::new(sides, &center, radius, angle).draw(&mut image);
+    }
+
+    raster::save(&image, "polygons.png").unwrap();
+}
+
+fn draw_rotating_cube_gif() {
     const WIDTH: i32 = 600;
     const HEIGHT: i32 = 600;
-    const FRAMES: usize = 60;
+    const FRAMES: usize = 120;
 
     fs::create_dir_all("frames").unwrap();
 
@@ -33,12 +86,10 @@ fn main() {
         let mut frame = Frame::default();
         frame.width = WIDTH as u16;
         frame.height = HEIGHT as u16;
-        frame.delay = 4;
+        frame.delay = 2;
         frame.buffer = Cow::Owned(indexed_pixels(&image));
         encoder.write_frame(&frame).unwrap();
     }
-
-    fs::copy("frames/cube_000.png", "image.png").unwrap();
 }
 
 fn indexed_pixels(image: &Image) -> Vec<u8> {
