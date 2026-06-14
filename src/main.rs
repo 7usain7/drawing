@@ -24,6 +24,8 @@ fn main() {
         gs::Polygon::new(sides, &center, radius, angle).draw(&mut image);
     }
 
+    gs::Cube::new(&gs::Point::new(360, 420), &gs::Point::new(520, 580), 90).draw(&mut image);
+
     raster::save(&image, "image.png").unwrap();
 }
 

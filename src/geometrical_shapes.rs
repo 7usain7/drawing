@@ -229,6 +229,60 @@ impl Drawable for Rectangle {
     }
 }
 
+pub struct Cube {
+    pub p1: Point,
+    pub p2: Point,
+    pub depth: i32,
+}
+
+impl Cube {
+    pub fn new(p1: &Point, p2: &Point, depth: i32) -> Self {
+        let min_x = p1.x.min(p2.x);
+        let max_x = p1.x.max(p2.x);
+        let min_y = p1.y.min(p2.y);
+        let max_y = p1.y.max(p2.y);
+
+        Cube {
+            p1: Point::new(min_x, min_y),
+            p2: Point::new(max_x, max_y),
+            depth,
+        }
+    }
+}
+
+impl Drawable for Cube {
+    fn draw(&self, image: &mut impl Displayable) {
+        let c = self.color();
+        let offset_x = self.depth;
+        let offset_y = -self.depth;
+
+        let front_tl = Point::new(self.p1.x, self.p1.y);
+        let front_tr = Point::new(self.p2.x, self.p1.y);
+        let front_br = Point::new(self.p2.x, self.p2.y);
+        let front_bl = Point::new(self.p1.x, self.p2.y);
+
+        let back_tl = Point::new(front_tl.x + offset_x, front_tl.y + offset_y);
+        let back_tr = Point::new(front_tr.x + offset_x, front_tr.y + offset_y);
+        let back_br = Point::new(front_br.x + offset_x, front_br.y + offset_y);
+        let back_bl = Point::new(front_bl.x + offset_x, front_bl.y + offset_y);
+
+        draw_line_pixels(&front_tl, &front_tr, c.clone(), image);
+        draw_line_pixels(&front_tr, &front_br, c.clone(), image);
+        draw_line_pixels(&front_br, &front_bl, c.clone(), image);
+        draw_line_pixels(&front_bl, &front_tl, c.clone(), image);
+
+        draw_line_pixels(&back_tl, &back_tr, c.clone(), image);
+        draw_line_pixels(&back_tr, &back_br, c.clone(), image);
+        draw_line_pixels(&back_br, &back_bl, c.clone(), image);
+        draw_line_pixels(&back_bl, &back_tl, c.clone(), image);
+
+        draw_line_pixels(&front_tl, &back_tl, c.clone(), image);
+        draw_line_pixels(&front_tr, &back_tr, c.clone(), image);
+        draw_line_pixels(&front_br, &back_br, c.clone(), image);
+        draw_line_pixels(&front_bl, &back_bl, c, image);
+    }
+}
+
 pub struct Polygon {
     pub points: Vec<Point>,
 }
@@ -302,5 +356,20 @@ mod tests {
 
         assert_eq!(mock.points.len(), 1);
         assert_eq!(mock.points[0], (50, 50));
+    }
+
+    #[test]
+    fn test_cube_normalization_and_drawing() {
+        let cube = Cube::new(&Point::new(20, 20), &Point::new(10, 10), 5);
+        let mut mock = MockImage { points: Vec::new() };
+
+        cube.draw(&mut mock);
+
+        assert_eq!(cube.p1, Point::new(10, 10));
+        assert_eq!(cube.p2, Point::new(20, 20));
+        assert!(mock.points.contains(&(10, 10)));
+        assert!(mock.points.contains(&(20, 20)));
+        assert!(mock.points.contains(&(15, 5)));
+        assert!(mock.points.contains(&(25, 15)));
     }
 }
