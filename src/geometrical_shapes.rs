@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rand::random_range;
 use raster::Color;
 
@@ -246,6 +248,59 @@ impl Cube {
             p1: Point::new(min_x, min_y),
             p2: Point::new(max_x, max_y),
             depth,
+        }
+    }
+
+    pub fn draw_rotated(&self, image: &mut impl Displayable, angle_degrees: f64, color: Color) {
+        let center_x = (self.p1.x + self.p2.x) as f64 / 2.0;
+        let center_y = (self.p1.y + self.p2.y) as f64 / 2.0;
+        let half_width = (self.p2.x - self.p1.x) as f64 / 2.0;
+        let half_height = (self.p2.y - self.p1.y) as f64 / 2.0;
+        let half_depth = self.depth as f64 / 2.0;
+        let angle = angle_degrees.to_radians();
+        let tilt = 25.0_f64.to_radians();
+
+        let vertices = [
+            (-half_width, -half_height, -half_depth),
+            (half_width, -half_height, -half_depth),
+            (half_width, half_height, -half_depth),
+            (-half_width, half_height, -half_depth),
+            (-half_width, -half_height, half_depth),
+            (half_width, -half_height, half_depth),
+            (half_width, half_height, half_depth),
+            (-half_width, half_height, half_depth),
+        ];
+
+        let points: Vec<Point> = vertices
+            .iter()
+            .map(|(x, y, z)| {
+                let rotated_x = x * angle.cos() + z * angle.sin();
+                let rotated_z = -x * angle.sin() + z * angle.cos();
+                let tilted_y = y * tilt.cos() - rotated_z * tilt.sin();
+                Point::new(
+                    (center_x + rotated_x).round() as i32,
+                    (center_y + tilted_y).round() as i32,
+                )
+            })
+            .collect();
+
+        let edges = [
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 0),
+            (4, 5),
+            (5, 6),
+            (6, 7),
+            (7, 4),
+            (0, 4),
+            (1, 5),
+            (2, 6),
+            (3, 7),
+        ];
+
+        for (start, end) in edges {
+            draw_line_pixels(&points[start], &points[end], color.clone(), image);
         }
     }
 }
