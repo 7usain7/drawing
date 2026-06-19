@@ -94,7 +94,7 @@ impl Drawable for Point {
         image.display(self.x, self.y, self.color());
     }
     fn color(&self) -> Color {
-        Color::rgb(0, 255, 255)
+        Color::red()
     }
 }
 
@@ -120,7 +120,7 @@ impl Drawable for Line {
         draw_line_pixels(&self.p1, &self.p2, self.color(), image);
     }
     fn color(&self) -> Color {
-        Color::rgb(255, 0, 0)
+        Color::blue()
     }
 }
 
@@ -175,6 +175,9 @@ impl Drawable for Circle {
             }
             x += 1;
         }
+    }
+    fn color(&self) -> Color {
+        Color::rgb(255, 255, 0)
     }
 }
 
