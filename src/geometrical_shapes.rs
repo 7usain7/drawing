@@ -93,6 +93,9 @@ impl Drawable for Point {
     fn draw(&self, image: &mut impl Displayable) {
         image.display(self.x, self.y, self.color());
     }
+    fn color(&self) -> Color {
+        Color::rgb(0, 255, 255)
+    }
 }
 
 pub struct Line {
@@ -115,6 +118,9 @@ impl Line {
 impl Drawable for Line {
     fn draw(&self, image: &mut impl Displayable) {
         draw_line_pixels(&self.p1, &self.p2, self.color(), image);
+    }
+    fn color(&self) -> Color {
+        Color::rgb(255, 0, 0)
     }
 }
 
