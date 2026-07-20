@@ -39,7 +39,7 @@ fn main() {
 
     // Draw primitives
     gs::Line::new(&gs::Point::new(10, 10), &gs::Point::new(790, 790)).draw(&mut image);
-    gs::Circle::new(gs::Point::new(400, 400), 150).draw(&mut image);
+    gs::Circle::random(image.width, image.height).draw(&mut image);
 
     // Save result
     raster::save(&image, "output.png").unwrap();
